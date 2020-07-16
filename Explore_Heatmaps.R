@@ -106,6 +106,7 @@ explore_windows <- function(data, sessiontype, window_width, window_by){
     }
     
   }
-  return(ex_windows)
   write.csv(ex_windows, sprintf("STW_%s_%i_%i.csv", sessiontype, window_width, window_by))
+  return(ex_windows)
+
 }
