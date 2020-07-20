@@ -1,5 +1,10 @@
+# This script requires ggplot. 
+# If you do not have ggplot, do install.packages('tidyverse')
+library(ggplot2)
+
+
 # Set Working Directory to MLINDIV master files
-working_Dir <- "C:/Users/UCI - Robert Woodry/Desktop/Data Processing/R/MLINDIV"
+working_Dir <- "C:/Users/17868/Documents/R/MLINDIV"
 setwd(working_Dir)
 
 # Read in master files
@@ -77,8 +82,9 @@ explore_windows <- function(data, sessiontype, window_width, window_by){
       choose_times <- subject_session_data$Choose.OnsetTime
       ssd <- subject_session_data
       
-      # TODO: For each start-end window frame, grab all data rows which (use which function) Choose Onset times 
-      #   fall within that window frame. Compile a dataframe row for ex_windows that contains pertinent info
+      # TODO: Change NA values to 0 (for windows where path vector length == 1)
+      # TODO: Merge new window data set with subject's accuracy rating
+      
       for (k in 1:length(win_starts)){
         window_data <- ssd[(choose_times >= win_starts[k] & choose_times <= win_ends[k]), ]
         x <- paste(window_data$x, collapse = " ")
@@ -90,7 +96,7 @@ explore_windows <- function(data, sessiontype, window_width, window_by){
         choose_RT <- paste(window_data$Choose.RT, collapse = " ")
         
         
-        window_row <- c(ssd$Subject[1], ssd$Task_type[1], k, win_ends[k] - win_starts[k], win_starts[k],
+        window_row <- data.frame(ssd$Subject[1], ssd$Task_type[1], k, win_ends[k] - win_starts[k], win_starts[k],
                         x, y, letter_loc, face_dir, choose_OT, choose_RTT, choose_RT,
                         as.numeric(table(window_data$movement)['Walk']), 
                         as.numeric(table(window_data$movement)['Rot']),
@@ -110,3 +116,58 @@ explore_windows <- function(data, sessiontype, window_width, window_by){
   return(ex_windows)
 
 }
+
+# Create a heatmap and 2d density plot given an explore_window and
+
+mlindiv_heatmap <- function(ex_window, rows, output = FALSE, noise = 0.1){
+  data <- data.frame(x = as.numeric(strsplit(paste(ex_window$x[rows], 
+                                                   collapse = " "), " ")[[1]]),  
+                     y = as.numeric(strsplit(paste(ex_window$y[rows], 
+                                                   collapse = " "), " ")[[1]]),
+                     id = 1:length(as.numeric(strsplit(
+                       paste(ex_window$y[rows], collapse = " "), " ")[[1]])),
+                     time = as.numeric(strsplit(paste(
+                       ex_window$choose_onset[rows], collapse = " "), " ")[[1]])
+                     )
+  tw_index <- c()
+  subject <- c()
+  
+  for (i in rows){
+    tw_index <- c(tw_index, 
+                  rep(ex_window$window_iter[i], 
+                      (ex_window$num_turns[i] + ex_window$num_moves[i])))
+    subject <- c(subject,
+                 rep(ex_window$subject[i], 
+                     (ex_window$num_turns[i] + ex_window$num_moves[i])))
+  }
+  
+  data <- cbind(data, tw_index, subject)
+  
+  data <- merge(data, table(data[,1:2]), sort = FALSE)
+  data <- data[order(data$id), ]
+  
+  #data$x <- jitter(data$x, noise)
+  #data$y <- jitter(data$y, noise)
+  
+  
+  if(output){
+    return(data)
+  }
+  else{
+    # TODO: option to plot Accuracy quartiles ~ time windows (four rows corresponding to acc quantiles, and the columns corresponding to time window index)
+    ggplot(data, aes(x,y)) + 
+      coord_fixed(xlim = c(-5.5, 8.5), ylim = c(-8,6)) +
+      facet_grid(rows = vars(tw_index),cols=vars(subject)) +
+      # stat_density_2d_filled() + 
+      geom_density_2d_filled(aes(x=jitter(x,noise), y = jitter(y, noise)), contour_var = "ndensity") + 
+      geom_path(aes(color = time), size=1) + 
+      geom_point(size = 3, aes(color=time)) + 
+      #geom_point(data = data, aes(x = data[1,1], y = data[1,2]),shape = 'S', size = 3, color = 'white') +
+      #geom_point(data = data, aes(x=data[nrow(data), 1], y = data[nrow(data), 2]),shape = 'E', size = 3, color = 'white') +
+      labs(color = "Time (ms)")
+  }
+  
+}
+
+
+
