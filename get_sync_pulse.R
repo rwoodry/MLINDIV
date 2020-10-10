@@ -1,6 +1,6 @@
 library(rprime)
 
-get_sync_pulses <- function(subjectnum, eprime_directory){
+get_sync_pulses <- function(subjectnum, eprime_directory, outdir = "D:/SampleData"){
   working_dir <- paste0(eprime_directory, "/", subjectnum)
   setwd(working_dir)
   filelist <- list.files()[grepl('.txt', list.files())]
@@ -16,17 +16,18 @@ get_sync_pulses <- function(subjectnum, eprime_directory){
     
     subject <- c(subject, strsplit(filelist[i], "-")[[1]][2])
     procedure <- c(procedure, strsplit(strsplit(filelist[i], "-")[[1]][1], "_")[[1]][1])
-    trial_type <- c(trial_type, paste0(strsplit(filelist[i], "")[[1]][13], strsplit(filelist[i], "")[[1]][15]))
+    tt <- paste0(strsplit(filelist[i], "")[[1]][13], strsplit(filelist[i], "")[[1]][15])
+    if (grepl('t', tt)){tt <- strsplit(tt, "")[[1]][1]}
+    trial_type <- c(trial_type, tt)
     getready_onset <- c(getready_onset, strsplit(test[grepl("GetReady.OnsetTime", test)], " ")[[1]][2])
     getready_response <- c(getready_response, strsplit(test[grepl("GetReady.RTTime", test)], " ")[[1]][2])
   }
   
   sync_pulses <- cbind(subject, trial_type, procedure, getready_onset, getready_response)
   
-  test <- as.data.frame(sync_pulses)
+  sync_pulses <- as.data.frame(sync_pulses)
+
   
-  test$trial_type[grepl('t', test$trial_type)] <- strsplit(test$trial_type[grepl('t', test$trial_type)], "")[[1]][1]
-  
-  sync_pulses <- test
+  write.csv(sync_pulses, sprintf("%s/sub-%s_syncpulses.csv", outdir, subjectnum), row.names = FALSE)
     
 }
